@@ -114,4 +114,9 @@ class HTMLModifier(Modifier):
     def get_modified_content(self) -> bytes:
         """Return a tuple of html content bytes and encoding"""
         self._add_script()
+        self._add_icon()
+        self._modify_html_link()
+        self._modify_html_css_background()
+        self._modify_html_srcset()
+        self._modify_html_css()
         return str(self.document).encode(self.encoding)
