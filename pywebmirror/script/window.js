@@ -8,14 +8,14 @@ function DOMMapping (target, css_selector, attr, func) {
 
 // redirect request
 let _open = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function(method, url, async) {
+window.XMLHttpRequest.prototype.open = function(method, url, async) {
 	let req_url = get_main_requested_url(url);
 	redirect_log("XMLHttpRequest", url, req_url);
 	_open.call(this, method, req_url, async);
 }
 
-let _fetch = fetch;
-fetch = function(url, options) {
+let _fetch = window.fetch;
+window.fetch = function(url, options) {
 	let req_url = url;
     if (typeof url == "string") {
 		req_url = get_main_requested_url(url);
@@ -28,8 +28,8 @@ fetch = function(url, options) {
     });
 }
 
-Request = new Proxy(
-	Request, {
+window.Request = new Proxy(
+	window.Request, {
 		construct(target, args) {
 			let req_url = get_main_requested_url(args[0])
 			redirect_log("Request", args[0], req_url);
@@ -39,16 +39,16 @@ Request = new Proxy(
 	}
 );
 
-let _sendBeacon = Navigator.prototype.sendBeacon;
-Navigator.prototype.sendBeacon = function(url, data=null) {
+let _sendBeacon = window.Navigator.prototype.sendBeacon;
+window.Navigator.prototype.sendBeacon = function(url, data=null) {
 	let req_url = get_main_requested_url(url);
 	redirect_log("navigator.sendBeacon", url, req_url);
 	return _sendBeacon.call(this, req_url, data);
 }
 
-if (ServiceWorkerContainer) {
-    let _register = ServiceWorkerContainer.prototype.register;
-    ServiceWorkerContainer.prototype.register = function(url, options) {
+if (window.ServiceWorkerContainer) {
+    let _register = window.ServiceWorkerContainer.prototype.register;
+    window.ServiceWorkerContainer.prototype.register = function(url, options) {
     	let req_url = get_worker_requested_url(url);
         redirect_log("ServiceWorkerContainer.register", url, req_url);
     
@@ -70,8 +70,8 @@ if (ServiceWorkerContainer) {
     }
 }
 
-Worker = new Proxy(
-	Worker, {
+window.Worker = new Proxy(
+	window.Worker, {
 		construct(target, args) {
 			let req_url = get_worker_requested_url(args[0])
 			redirect_log("Worker", args[0], req_url);
@@ -81,8 +81,8 @@ Worker = new Proxy(
 	}
 );
 
-SharedWorker = new Proxy(
-	SharedWorker, {
+window.SharedWorker = new Proxy(
+	window.SharedWorker, {
 		construct(target, args) {
 			let req_url = get_worker_requested_url(args[0])
 			redirect_log("SharedWorker", args[0], req_url);
