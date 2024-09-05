@@ -1,18 +1,13 @@
+"""This file is to test the server"""
+
+
 from io import BytesIO
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from certifi import where as cert_where
 from urllib.parse import urlparse
-from re import search
 from traceback import format_exc
-from pywebmirror import __version__
-from pywebmirror.modifier.html import HTMLModifier
-from pywebmirror.modifier.css import CSSModifier
-from pywebmirror.modifier.js import JSModifier
-from pywebmirror.modifier.js import JSMODIFIER_WORKER_SCRIPT
-from pywebmirror.common.config import Conf
-from pywebmirror.common.util import check_args
-from pywebmirror.common.util import get_absolute_url
-from pywebmirror.common.util import remove_quote
+from remotecurl.common.config import Conf
+from remotecurl.common.util import check_args, remove_quote
 import pycurl as curl
 import zlib
 import brotli
@@ -175,38 +170,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
 
     def send_version_header(self) -> None:
         """Send version header"""
-        self.send_header('redirect-server', f"PyWebMirror")
-
-    def check_rewrite_required(self, content_type: str, content_disposition: str) -> bool:
-        """Helper method of write_curl to check if content needs to be rewritten"""
-        rewrite_required_content_type = ["text/html", "text/css", "text/javascript"]
-        file_content_type = ""
-
-        for type in rewrite_required_content_type:
-            if type in content_type:
-                file_content_type = type
-                break
-
-        if content_disposition == "" and file_content_type != "":
-            return True
-
-        obj = content_disposition.split(";")
-        format = obj[0].lower().strip()
-        if format == "inline" and file_content_type != "":
-            return True
-
-        if format == "attachment":
-            if len(obj) > 1:
-                filename_key_value = obj[1].split("=", 1)
-                if len(filename_key_value) < 1:
-                    return False
-
-                filename = remove_quote(filename_key_value[1].strip())
-                file_content_type, _ = mimetypes.guess_type(filename)
-
-                return file_content_type in rewrite_required_content_type
-
-        return False
+        self.send_header('redirect-server', f"RemoteCurl")
 
     def check_rewrite_required(self, content_type: str, content_disposition: str) -> bool:
         """Helper method of write_curl to check if content needs to be rewritten"""
@@ -245,7 +209,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
         self.send_response_only(code)
         self.send_header("content-type", content_type)
         self.send_version_header()
-        self.send_header("date", self.date_time_string())
+        self.send_header('date', self.date_time_string())
         self.end_headers()
         self.wfile.write(message.encode())
 
@@ -258,10 +222,10 @@ class RedirectHandler(BaseHTTPRequestHandler):
         TODO: add code to check CSP before loading
         """
 
-        requested_path, base_url, requested_url = self.get_requested_url()
+        requested_path, _, requested_url = self.get_requested_url()
 
         try:
-            if not any(path == requested_path for path in [__SERVER_MAIN_PATH__, __SERVER_WORKER_PATH__]):
+            if not (__SERVER_MAIN_PATH__ == requested_path or __SERVER_WORKER_PATH__ == requested_path):
                 self.write_message(400, "BAD_REQUEST")
             elif not check_args(requested_url, __ALLOW_URL_RULES__, __DENY_URL_RULES__):
                 self.write_message(403, "URL_ACCESS_DENIED")
@@ -303,71 +267,6 @@ class RedirectHandler(BaseHTTPRequestHandler):
 
                 data = buffer.getvalue()
 
-                # Modify content or response headers
-                if (http_code >= 300 or http_code <= 399) and "location" in response_headers:
-                    response_headers["location"] = base_url + get_absolute_url(requested_url, response_headers["location"])
-
-                not_allowed_headers = [
-                    "content-security-policy", "content-security-policy-report-only",
-                    "cross-origin-opener-policy", "cross-origin-opener-policy-report-only",
-                    "cross-origin-embedder-policy","cross-origin-embedder-policy-report-only"
-                ]
-
-                for header in not_allowed_headers:
-                    if header in response_headers:
-                        response_headers.pop(header)
-
-                if "content-type" in response_headers:
-                    content_type = response_headers["content-type"]
-                    encoding = "utf-8"
-                    matched = search(r"charset=(\S+)", content_type)
-                    if matched:
-                        encoding = matched.group(1)
-
-                    content_disposition = ""
-                    if "content-disposition" in response_headers:
-                        content_disposition = response_headers["content-disposition"]
-
-                    rewrite_required = self.check_rewrite_required(content_type, content_disposition)
-
-                    if rewrite_required:
-                        # Decompress before making changes
-                        if "content-encoding" in response_headers:
-                            data = self.get_uncompressed_data(data, response_headers["content-encoding"])
-
-                        if "text/html" in content_type and requested_path == __SERVER_MAIN_PATH__:
-                            m = HTMLModifier(
-                                data, requested_url, __SERVER_MAIN_PATH__, __SERVER_WORKER_PATH__,
-                                __SERVER_URL__, encoding, __ALLOW_URL_RULES__, __DENY_URL_RULES__
-                            )
-                            data = m.get_modified_content()
-
-                        if "text/css" in content_type and requested_path == __SERVER_MAIN_PATH__:
-                            m = CSSModifier(
-                                data, requested_url, __SERVER_MAIN_PATH__, encoding,
-                                __ALLOW_URL_RULES__, __DENY_URL_RULES__
-                            )
-                            data = m.get_modified_content()
-
-                        if "text/javascript" in content_type and requested_path == __SERVER_WORKER_PATH__:
-                            m = JSModifier(
-                                data, requested_url, __SERVER_MAIN_PATH__, __SERVER_WORKER_PATH__,
-                                __SERVER_URL__, encoding, __ALLOW_URL_RULES__, __DENY_URL_RULES__
-                            )
-                            data = m.get_modified_content(JSMODIFIER_WORKER_SCRIPT)
-
-                        # Compress after changes          
-                        if "content-encoding" in response_headers:
-                            data = self.get_compressed_data(data, response_headers["content-encoding"])
-
-                        if "content-length" in response_headers:
-                            response_headers["content-length"] = str(len(data))
-
-                if "transfer-encoding" in response_headers:
-                    if response_headers["transfer-encoding"] == "chunked":
-                        response_headers.pop("transfer-encoding")
-                        response_headers["content-length"] = str(len(data))
-
                 self.log_request(http_code)
                 self.send_response_only(http_code)
                 for key, value in response_headers.to_dict().items():
@@ -403,3 +302,18 @@ class RedirectHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         """Handle options request"""
         self.write_curl(CURL_OPTIONS)
+
+    def do_CONNECT(self) -> None:
+        pass
+
+def main():
+    try:
+        with ThreadingHTTPServer(("0.0.0.0", __SERVER_PORT__), RedirectHandler) as server:
+            server.serve_forever()
+    except KeyboardInterrupt:
+        print("^C pressed. Stopping server.")
+        server.socket.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,3 +1,4 @@
+esprima>=4.0.1
 beautifulsoup4>=4.12.3
 certifi>=2023.11.17
 jsmin>=3.0.1

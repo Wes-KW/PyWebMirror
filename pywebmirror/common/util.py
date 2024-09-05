@@ -1,7 +1,7 @@
-from typing import Any, Optional
+from typing import Any
 from base64 import b64decode, b64encode
 from os.path import realpath, dirname
-from urllib.parse import urljoin, quote_plus, unquote_plus
+from urllib.parse import quote_plus, unquote_plus
 from re import search
 
 
@@ -25,7 +25,7 @@ def decodeURL(encoded: str) -> str:
     return unquote_plus(encoded)
 
 
-def get_value_in_dict(map: dict, key: Any) -> Any:
+def get_value(map: dict, key: Any) -> Any:
     """
     Return the value of a key in a dictionary.
     In the key is not found, return None.
@@ -51,11 +51,6 @@ def check_args(arg: str, allow_rules: list[str] = ["^(.*)$"], deny_rules: list[s
                 break
 
         return filter_arg != ""
-
-
-def get_absolute_url(base_url: str, relative_url: Optional[str] = None) -> str:
-    """Get the absolute url of a web resource"""
-    return urljoin(base_url, relative_url)
 
 
 def get_script(filename: str) -> str:

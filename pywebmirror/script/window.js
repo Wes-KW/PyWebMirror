@@ -179,15 +179,15 @@ for (let dom_mapping of dom_mappings) {
     });
 }
 
-const observer_callback = function () {
+const observer_callback = function(mutations) {
     // reset src and href of any new element
-    for (let dom_mapping of dom_mappings) {
-        let css_selector = dom_mapping.css_selector;
-        let attr = dom_mapping.attr;
-        let doms = document.querySelectorAll(css_selector);
-        for (let dom of doms) {
-            if(dom.hasAttribute && dom.hasAttribute(attr)){
-                dom[attr] = dom[attr];
+    for (let mutation of mutations) {
+        for (let node of mutation.addedNodes) {
+            for (let dom_mapping of dom_mappings) {
+                let cls = dom_mapping.target;
+                if (node instanceof cls && node[dom_mapping.attr]) {
+                    node[attr] = node[attr];
+                }
             }
         }
     }

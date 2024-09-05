@@ -1,18 +1,17 @@
+"""This file is to test the server"""
+
+
 from io import BytesIO
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from certifi import where as cert_where
 from urllib.parse import urlparse
 from re import search
 from traceback import format_exc
-from pywebmirror import __version__
-from pywebmirror.modifier.html import HTMLModifier
-from pywebmirror.modifier.css import CSSModifier
-from pywebmirror.modifier.js import JSModifier
-from pywebmirror.modifier.js import JSMODIFIER_WORKER_SCRIPT
-from pywebmirror.common.config import Conf
-from pywebmirror.common.util import check_args
-from pywebmirror.common.util import get_absolute_url
-from pywebmirror.common.util import remove_quote
+from remotecurl.modifier.html import HTMLModifier
+from remotecurl.modifier.css import CSSModifier
+from remotecurl.modifier.js import JSModifier, JSMODIFIER_WORKER_SCRIPT
+from remotecurl.common.config import Conf
+from remotecurl.common.util import check_args, get_absolute_url, remove_quote
 import pycurl as curl
 import zlib
 import brotli
@@ -133,15 +132,14 @@ class RedirectHandler(BaseHTTPRequestHandler):
         if "host" in headers:
             requested_url_obj = urlparse(requested_url)
             headers["host"] = requested_url_obj.hostname
-        
+
         if "referer" in headers:
             referer_url = headers["referer"][len(base_url):]
             referer_url_obj = urlparse(referer_url)
             ref_hostname = referer_url_obj.hostname
             ref_scheme = referer_url_obj.scheme
         
-            headers["referer"] = f"{ref_scheme}://{ref_hostname}/"
-
+            headers["referer"] = referer_url
             if "origin" in headers:
                 headers["origin"] = f"{ref_scheme}://{ref_hostname}"
 
@@ -175,38 +173,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
 
     def send_version_header(self) -> None:
         """Send version header"""
-        self.send_header('redirect-server', f"PyWebMirror")
-
-    def check_rewrite_required(self, content_type: str, content_disposition: str) -> bool:
-        """Helper method of write_curl to check if content needs to be rewritten"""
-        rewrite_required_content_type = ["text/html", "text/css", "text/javascript"]
-        file_content_type = ""
-
-        for type in rewrite_required_content_type:
-            if type in content_type:
-                file_content_type = type
-                break
-
-        if content_disposition == "" and file_content_type != "":
-            return True
-
-        obj = content_disposition.split(";")
-        format = obj[0].lower().strip()
-        if format == "inline" and file_content_type != "":
-            return True
-
-        if format == "attachment":
-            if len(obj) > 1:
-                filename_key_value = obj[1].split("=", 1)
-                if len(filename_key_value) < 1:
-                    return False
-
-                filename = remove_quote(filename_key_value[1].strip())
-                file_content_type, _ = mimetypes.guess_type(filename)
-
-                return file_content_type in rewrite_required_content_type
-
-        return False
+        self.send_header('redirect-server', f"RemoteCurl")
 
     def check_rewrite_required(self, content_type: str, content_disposition: str) -> bool:
         """Helper method of write_curl to check if content needs to be rewritten"""
@@ -245,7 +212,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
         self.send_response_only(code)
         self.send_header("content-type", content_type)
         self.send_version_header()
-        self.send_header("date", self.date_time_string())
+        self.send_header('date', self.date_time_string())
         self.end_headers()
         self.wfile.write(message.encode())
 
@@ -261,7 +228,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
         requested_path, base_url, requested_url = self.get_requested_url()
 
         try:
-            if not any(path == requested_path for path in [__SERVER_MAIN_PATH__, __SERVER_WORKER_PATH__]):
+            if not (__SERVER_MAIN_PATH__ == requested_path or __SERVER_WORKER_PATH__ == requested_path):
                 self.write_message(400, "BAD_REQUEST")
             elif not check_args(requested_url, __ALLOW_URL_RULES__, __DENY_URL_RULES__):
                 self.write_message(403, "URL_ACCESS_DENIED")
@@ -307,15 +274,32 @@ class RedirectHandler(BaseHTTPRequestHandler):
                 if (http_code >= 300 or http_code <= 399) and "location" in response_headers:
                     response_headers["location"] = base_url + get_absolute_url(requested_url, response_headers["location"])
 
-                not_allowed_headers = [
-                    "content-security-policy", "content-security-policy-report-only",
-                    "cross-origin-opener-policy", "cross-origin-opener-policy-report-only",
-                    "cross-origin-embedder-policy","cross-origin-embedder-policy-report-only"
-                ]
+                if "content-security-policy" in response_headers:
+                    response_headers.pop("content-security-policy")
 
-                for header in not_allowed_headers:
-                    if header in response_headers:
-                        response_headers.pop(header)
+                if "content-security-policy-report-only" in response_headers:
+                    response_headers.pop("content-security-policy-report-only")
+
+                if "cross-origin-opener-policy" in response_headers:
+                    response_headers.pop("cross-origin-opener-policy")
+
+                if "cross-origin-opener-policy-report-only" in response_headers:
+                    response_headers.pop("cross-origin-opener-policy-report-only")
+
+                if "cross-origin-embedder-policy" in response_headers:
+                    response_headers.pop("cross-origin-embedder-policy")
+
+                if "cross-origin-embedder-policy-report-only" in response_headers:
+                    response_headers.pop("cross-origin-embedder-policy-report-only")
+
+                if "access-control-allow-credentials" in response_headers:
+                    response_headers.pop("access-control-allow-credentials")
+
+                if "access-control-allow-origin" in response_headers:
+                    response_headers["access-control-allow-origin"] = "*"
+
+                if "timing-allow-origin" in response_headers:
+                    response_headers["timing-allow-origin"] = "*" 
 
                 if "content-type" in response_headers:
                     content_type = response_headers["content-type"]
@@ -403,3 +387,16 @@ class RedirectHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         """Handle options request"""
         self.write_curl(CURL_OPTIONS)
+
+
+def main():
+    try:
+        with ThreadingHTTPServer(("0.0.0.0", __SERVER_PORT__), RedirectHandler) as server:
+            server.serve_forever()
+    except KeyboardInterrupt:
+        print("^C pressed. Stopping server.")
+        server.socket.close()
+
+
+if __name__ == "__main__":
+    main()

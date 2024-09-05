@@ -20,6 +20,7 @@ authors = [
 ]
 dependencies = [
   "beautifulsoup4>=4.12.3",
+  "esprima>=4.0.1",
   "certifi>=2023.11.17",
   "jsmin>=3.0.1",
   "pycurl>=7.45.3",

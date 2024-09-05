@@ -4,7 +4,6 @@
 /build
 /dist
 /pywebmirror.egg-info
-/.tmp
 __pycache__
 /pywebmirror/server/__server.py
 /config.json
