@@ -4,7 +4,6 @@ from certifi import where as cert_where
 from urllib.parse import urlparse
 from re import search
 from traceback import format_exc
-from pywebmirror import __version__
 from pywebmirror.modifier.html import HTMLModifier
 from pywebmirror.modifier.css import CSSModifier
 from pywebmirror.modifier.js import JSModifier

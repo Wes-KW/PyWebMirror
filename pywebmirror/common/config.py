@@ -29,7 +29,7 @@ class _ObjDict(object):
 class Conf(_ObjDict):
     
     def __init__(self) -> None:
-        conf_path = expanduser(f"~/.config/pywebmirror/pywebmirror.json")
+        conf_path = expanduser(f"~/.config/pywebmirror/config.json")
 
         if not exists(conf_path):
             raise FileNotFoundError()             

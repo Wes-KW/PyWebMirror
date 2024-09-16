@@ -16,7 +16,7 @@ PyWebMirror is a python based server that proxies http/https request.
 python3 -m pip install pywebmirror
 ```
 
-3. Save the [configuration file](https://github.com/Wes-KW/PyWebMirror/blob/main/config.json) into `~/.config/pywebmirror/pywebmirror.json`
+3. Save the [configuration file](https://github.com/Wes-KW/PyWebMirror/blob/main/config.json) into `~/.config/pywebmirror/config.json`
 
 4. Start pywebmirror
 ```shell
