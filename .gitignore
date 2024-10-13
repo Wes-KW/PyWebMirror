@@ -3,6 +3,5 @@
 /.venv
 /build
 /dist
-/pywebmirror.egg-info
+/private
 __pycache__
-/pywebmirror/server/__server.py

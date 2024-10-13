@@ -1,0 +1,30 @@
+{
+	"auth": {
+		"path": "/etc/pwm/auth.bin",
+		"encrypt": {
+			"enable": true,
+			"method": "base64"
+		}
+	},
+	"server": {
+		"name": "localhost",
+		"port": 443,
+		"ssl": {
+			"enable": true,
+			"certificatePath": "/etc/pwm/local-dev.pem"
+		},
+		"url": {
+			"encrypt": {
+				"enable": true,
+				"method": "base64"
+			},
+			"rules": {
+				"allow": [
+					"^https?://.+"
+				],
+				"deny": []
+			}
+		},
+		"debug": true
+	}
+}
