@@ -1,9 +1,10 @@
 {
-	"auth": {
-		"path": "/etc/pwm/auth.bin",
+	"user": {
+		"dataPath": "/etc/pwm/user.bin",
+		"hashPath": "/etc/pwm/user.hash",
 		"encrypt": {
 			"enable": true,
-			"method": "base64"
+			"method": "rsa"
 		}
 	},
 	"server": {
@@ -16,7 +17,7 @@
 		"url": {
 			"encrypt": {
 				"enable": true,
-				"method": "base64"
+				"method": "rsa"
 			},
 			"rules": {
 				"allow": [
