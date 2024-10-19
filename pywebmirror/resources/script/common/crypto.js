@@ -1,3 +1,0 @@
-/*
-	DESCRIPTION: Encryption and Description
-*/

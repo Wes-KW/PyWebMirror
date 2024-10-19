@@ -1,0 +1,9 @@
+{
+	"dataPath": "/etc/pwm/user.bin",
+	"hashPath": "/etc/pwm/user.hash",
+	"encrypt": {
+		"enable": true,
+		"method": "rsa",
+		"hash": "sha256"
+	}
+}

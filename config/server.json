@@ -1,0 +1,20 @@
+{
+	"name": "localhost",
+	"ports": {
+		"http": 80,
+		"https": 443
+	},
+	"ssl": {
+		"enable": true,
+		"certificatePath": "/etc/pwm/local-dev.pem"
+	},
+	"url": {
+		"rules": {
+			"allow": [
+				"^https?://.+"
+			],
+			"deny": []
+		}
+	},
+	"debug": true
+}

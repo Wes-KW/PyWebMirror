@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <!--
-	DESCRIPTION: PyWebMirror Base Page: Home and Others
+	DESCRIPTION: PyWebMirror Base Page: Home and Rewritten Pages
 
 	NOTE: This page should be served at the IDENTICAL
 	NOTE: url as the authorization page.
 
 	Include Features:
-		- Embed auth.html to
-			- Extend authorization expiration time
-			- Sign out
+		- Extend session by sending a request to auth.example.com/extend
+		- Sign out by sending a request to auth.example.com/signout
 		- Embed frame.html to
 			- display a tool bar
 			- show windows for different usage
